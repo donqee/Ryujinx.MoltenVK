@@ -1,0 +1,30 @@
+From b6585312c952b30491f95a77870b287f523e7879 Mon Sep 17 00:00:00 2001
+From: V380-Ori <infiniteloop0finsanity@gmail.com>
+Date: Tue, 18 Aug 2026 02:18:37 +0300
+Subject: [PATCH] Avoid clamping render target size for attachmentless
+ framebuffers.
+
+---
+ MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm b/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm
+index 8c24debb..0e415b37 100644
+--- a/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm
++++ b/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm
+@@ -798,8 +798,10 @@ static MVKBarrierStage commandUseToBarrierStage(MVKCommandUse use) {
+ 	// we just set the render target extent to cover the render area.
+ 	VkExtent2D fbExtent = getFramebufferExtent();
+ 	VkExtent2D raFullExtent = { _renderArea.offset.x + _renderArea.extent.width, _renderArea.offset.y + _renderArea.extent.height };
+-    mtlRPDesc.renderTargetWidth = max(min(raFullExtent.width, (fbExtent.width ? fbExtent.width : raFullExtent.width)), 1u);
+-    mtlRPDesc.renderTargetHeight = max(min(raFullExtent.height, (fbExtent.height ? fbExtent.height : raFullExtent.height)), 1u);
++	uint32_t clampWidth = (fbExtent.width <= 1) ? raFullExtent.width : fbExtent.width;
++	uint32_t clampHeight = (fbExtent.height <= 1) ? raFullExtent.height : fbExtent.height;
++    mtlRPDesc.renderTargetWidth = max(min(raFullExtent.width, clampWidth), 1u);
++    mtlRPDesc.renderTargetHeight = max(min(raFullExtent.height, clampHeight), 1u);
+     if (_canUseLayeredRendering) {
+         uint32_t renderTargetArrayLength;
+         bool found3D = false, found2D = false;
+-- 
+2.54.0 (Apple Git-157)
+
