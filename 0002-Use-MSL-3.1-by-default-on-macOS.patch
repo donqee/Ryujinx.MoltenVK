@@ -1,0 +1,78 @@
+From 65bc23944acc07b268fc13be47c3fbb422e75d85 Mon Sep 17 00:00:00 2001
+From: V380-Ori <infiniteloop0finsanity@gmail.com>
+Date: Fri, 28 Aug 2026 04:17:24 +0300
+Subject: [PATCH] Use MSL 3.1 by default on macOS.
+
+---
+ MoltenVK/MoltenVK/API/mvk_private_api.h        | 1 +
+ MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm      | 9 +++++++++
+ MoltenVK/MoltenVK/Utility/MVKConfigMembers.def | 3 ++-
+ MoltenVK/MoltenVK/Utility/MVKEnvironment.h     | 4 ++++
+ 4 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/MoltenVK/MoltenVK/API/mvk_private_api.h b/MoltenVK/MoltenVK/API/mvk_private_api.h
+index fdfa71ae..3b7c6e0d 100644
+--- a/MoltenVK/MoltenVK/API/mvk_private_api.h
++++ b/MoltenVK/MoltenVK/API/mvk_private_api.h
+@@ -247,6 +247,7 @@ typedef struct {
+ 	const char* shaderDumpDir;                                                 /**< MVK_CONFIG_SHADER_DUMP_DIR */
+ 	VkBool32 shaderLogEstimatedGLSL;                                           /**< MVK_CONFIG_SHADER_LOG_ESTIMATED_GLSL */
+ 	VkBool32 liveCheckAllResources;                                            /**< MVK_CONFIG_LIVE_CHECK_ALL_RESOURCES */
++	VkBool32 useMSL3_1;                                                        /**< MVK_CONFIG_USE_MSL_3_1 */
+ } MVKConfiguration;
+ 
+ // Legacy support for renamed struct elements.
+diff --git a/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm b/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm
+index 53782627..cb81e451 100644
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm
+@@ -2660,6 +2660,15 @@
+ 		setMSLVersion(2, 4);
+ 	}
+ 
++#if MVK_MACOS
++	if (getMVKConfig().useMSL3_1) {
++		if (mvkOSVersionIsAtLeast(14.0)) {
++			_metalFeatures.mslVersionEnum = MTLLanguageVersion3_1;
++			setMSLVersion(3, 1);
++		}
++	}
++#endif
++
+ 	_metalFeatures.programmableSamplePositions = _mtlDevice.areProgrammableSamplePositionsSupported;
+ 	_metalFeatures.rasterOrderGroups = _mtlDevice.areRasterOrderGroupsSupported;
+ 	_metalFeatures.pullModelInterpolation = _mtlDevice.supportsPullModelInterpolation;
+diff --git a/MoltenVK/MoltenVK/Utility/MVKConfigMembers.def b/MoltenVK/MoltenVK/Utility/MVKConfigMembers.def
+index 5f7e0a58..953fe6c2 100644
+--- a/MoltenVK/MoltenVK/Utility/MVKConfigMembers.def
++++ b/MoltenVK/MoltenVK/Utility/MVKConfigMembers.def
+@@ -86,6 +86,7 @@ MVK_CONFIG_MEMBER(useMetalPrivateAPI,                     VkBool32,
+ MVK_CONFIG_MEMBER_STRING(shaderDumpDir,                   char*,                                    SHADER_DUMP_DIR)
+ MVK_CONFIG_MEMBER(shaderLogEstimatedGLSL,                 VkBool32,                                 SHADER_LOG_ESTIMATED_GLSL)
+ MVK_CONFIG_MEMBER(liveCheckAllResources,                  VkBool32,                                 LIVE_CHECK_ALL_RESOURCES)
++MVK_CONFIG_MEMBER(useMSL3_1,                              VkBool32,                                 USE_MSL_3_1)
+ 
+ #undef MVK_CONFIG_MEMBER
+ #undef MVK_CONFIG_MEMBER_STRING
+@@ -101,5 +102,5 @@ MVK_CONFIG_MEMBER(liveCheckAllResources,                  VkBool32,
+  * Once  MVKConfiguration and the list above are in agreement, it may be necessary to modify
+  * this value if the internal padding has changed as a result of new MVKConfiguration members.
+  */
+-#define kMVKConfigurationInternalPaddingByteCount  4
++#define kMVKConfigurationInternalPaddingByteCount  8
+ 
+diff --git a/MoltenVK/MoltenVK/Utility/MVKEnvironment.h b/MoltenVK/MoltenVK/Utility/MVKEnvironment.h
+index e6d176c8..97537f68 100644
+--- a/MoltenVK/MoltenVK/Utility/MVKEnvironment.h
++++ b/MoltenVK/MoltenVK/Utility/MVKEnvironment.h
+@@ -350,3 +350,7 @@ void mvkSetConfig(MVKConfiguration& dstMVKConfig, const MVKConfiguration& srcMVK
+ #ifndef MVK_CONFIG_LIVE_CHECK_ALL_RESOURCES
+ #   define MVK_CONFIG_LIVE_CHECK_ALL_RESOURCES 0
+ #endif
++
++#ifndef MVK_CONFIG_USE_MSL_3_1
++#	define MVK_CONFIG_USE_MSL_3_1	1
++#endif
+-- 
+2.54.0 (Apple Git-157)
+
